@@ -72,19 +72,16 @@ def getAnotationOfString(string_txt,suffix):
     anotationMatch = re.search(anotationRegex,string_txt)
     anotationString = ''
     if anotationMatch:
-        match = re.search(AnotationRegexPrefix,anotationMatch.group(0))
-        if match:
-            anotationString = match.group(0)
+        if match := re.search(AnotationRegexPrefix, anotationMatch[0]):
+            anotationString = match[0]
     return anotationString
 
 def compareWithFilePath(newStringPath,originalStringPath):
     print(newStringPath)
     print(originalStringPath)
-    #read newStringfile
-    nspf=open(newStringPath,"r")
-    #newString_txt =  str(nspf.read(5000000)).decode("utf-16")
-    newString_txt = decoder(str(nspf.read(5000000)))
-    nspf.close()
+    with open(newStringPath,"r") as nspf:
+        #newString_txt =  str(nspf.read(5000000)).decode("utf-16")
+        newString_txt = decoder(str(nspf.read(5000000)))
     newString_dic = {}
     anotation_dic = {}
     for stfmatch in re.finditer(KeyParamRegex , newString_txt):
@@ -96,10 +93,8 @@ def compareWithFilePath(newStringPath,originalStringPath):
             rightvalue = linematchs[1]
             newString_dic[leftvalue] = rightvalue
             anotation_dic[leftvalue] = anotationString
-    #read originalStringfile
-    ospf=open(originalStringPath,"r")
-    originalString_txt =  decoder(str(ospf.read(5000000)))
-    ospf.close()
+    with open(originalStringPath,"r") as ospf:
+        originalString_txt =  decoder(str(ospf.read(5000000)))
     originalString_dic = {}
     for stfmatch in re.finditer(KeyParamRegex , originalString_txt):
         linestr = stfmatch.group(0)
@@ -110,9 +105,9 @@ def compareWithFilePath(newStringPath,originalStringPath):
             originalString_dic[leftvalue] = rightvalue
     #compare and remove the useless param in original string
     for key in originalString_dic:
-        if(key not in newString_dic):
+        if (key not in newString_dic):
             keystr = '"%s"'%key
-            replacestr = '//'+keystr
+            replacestr = f'//{keystr}'
             match = re.search(replacestr , originalString_txt)
             if match is None:
                 originalString_txt = originalString_txt.replace(keystr,replacestr)
@@ -120,21 +115,19 @@ def compareWithFilePath(newStringPath,originalStringPath):
     executeOnce = 1
     for key in newString_dic:
         values = (key, newString_dic[key])
-        if(key not in originalString_dic):
+        if (key not in originalString_dic):
             newline = ''
             if executeOnce == 1:
                 timestamp = time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time()))
                 newline = '\n//##################################################################################\n'
-                newline    +='//#           AutoGenStrings            '+timestamp+'\n'
+                newline += f'//#           AutoGenStrings            {timestamp}' + '\n'
                 newline    +='//##################################################################################\n'
                 executeOnce = 0
             newline += '\n'+anotation_dic[key]
             newline += '\n"%s" = "%s";\n'%values
             originalString_txt += newline
-    #write into origial file
-    sbfw=open(originalStringPath,"w")
-    sbfw.write(originalString_txt)
-    sbfw.close()
+    with open(originalStringPath,"w") as sbfw:
+        sbfw.write(originalString_txt)
 
 def extractFileName(file_path):
     seg = file_path.split('/')
@@ -144,11 +137,13 @@ def extractFileName(file_path):
 def extractFilePrefix(file_path):
     seg = file_path.split('/')
     lastindex = len(seg) - 1
-    prefix =  seg[lastindex].split('.')[0]
-    return prefix
+    return seg[lastindex].split('.')[0]
 
 def generateStoryboardStringsfile(storyboard_path,tempstrings_path):
-    cmdstring = 'ibtool '+storyboard_path+' --generate-strings-file '+tempstrings_path
+    cmdstring = (
+        f'ibtool {storyboard_path} --generate-strings-file {tempstrings_path}'
+    )
+
     if os.system(cmdstring) == 0:
         return 1
 
@@ -218,8 +213,8 @@ def main():
         except Exception as e:
             pass
         else:
-            sourceFilePathName = sourceFilePath + '/*.storyboard'
-            upperFilePath = sourceFilePath[0:(baseStrIdx-1)]
+            sourceFilePathName = f'{sourceFilePath}/*.storyboard'
+            upperFilePath = sourceFilePath[:baseStrIdx-1]
             #print upperFilePath
             generateLocalizableFiles(upperFilePath, sourceFilePathName)
     # *.xib 国际化
@@ -230,8 +225,8 @@ def main():
         except Exception as e:
             pass
         else:
-            sourceFilePathName = sourceFilePath + '/*.xib'
-            upperFilePath = sourceFilePath[0:(baseStrIdx-1)]
+            sourceFilePathName = f'{sourceFilePath}/*.xib'
+            upperFilePath = sourceFilePath[:baseStrIdx-1]
             #print upperFilePath
             generateLocalizableFiles(upperFilePath, sourceFilePathName)
 
